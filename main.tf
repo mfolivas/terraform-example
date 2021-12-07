@@ -6,29 +6,31 @@ module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
   name = "my-vpc"
-  cidr = "10.0.0.0/16"
+  cidr = var.vpc_cidr_blocks
 
-  azs             = ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  azs             = [var.avail_zone]
+  public_subnets  = [var.subnet_cidr_blocks]
 
   enable_nat_gateway = true
   enable_vpn_gateway = true
 
+  public_subnet_tags = {
+    Name = "${var.env_prefix}-subnet-1"
+  }
+
   tags = {
-    Terraform = "true"
-    Environment = "dev"
+    Name = "${var.env_prefix}-vpc"
   }
 }
 
 module "myapp-server" {
   source = "./modules/webserver"
-  vpc_id = aws_vpc.myapp-vpc.id
+  vpc_id = module.vpc.vpc_id
   my_ip = var.my_ip
   env_prefix = var.env_prefix
   image_name = var.image_name
   public_key_location = var.public_key_location
   instance_type = var.instance_type
-  subnet_id = module.myapp-subnet.subnet.id
+  subnet_id = module.vpc.public_subnets[0]
   avail_zone = var.avail_zone
 }
